@@ -11,16 +11,46 @@
             background-image: url('https://raw.githubusercontent.com/tampubolonrenhard22-sys/surprise/f2e29e6e8f633ddcd341a06c4d1b49355e26a603/valentine.jpeg');
             background-size: cover; background-position: center; background-attachment: fixed;
             display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden;
+            position: relative;
         }
         .hidden { display: none !important; }
+
+        /* ANIMASI TEKS POP-BOUNCE */
+        @keyframes popBounce {
+            0% { opacity: 0; transform: scale(0.5); }
+            70% { transform: scale(1.1); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+        .animate-in { animation: popBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
         .container {
-            text-align: center; width: 90%; max-width: 400px; z-index: 10;
+            text-align: center; width: 90%; max-width: 400px; z-index: 20;
             background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(10px);
             padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            opacity: 0;
         }
-        #section1.container { background: transparent; box-shadow: none; backdrop-filter: none; }
+        #section1.container { background: transparent; box-shadow: none; backdrop-filter: none; opacity: 1; }
 
-        /* --- 1. AMPLOP ANIMASI --- */
+        /* GELEMBUNG TEBAL & BESAR BEBAS ARAH */
+        .bubble-container { position: absolute; width: 100%; height: 100%; top: 0; left: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+        .bubble {
+            position: absolute; bottom: -100px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border: 2.5px solid rgba(255, 255, 255, 0.8); 
+            box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.5);
+            animation: floatRandom linear infinite;
+        }
+        @keyframes floatRandom {
+            0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            25% { transform: translate(var(--x1), -30vh) rotate(90deg); }
+            50% { transform: translate(var(--x2), -60vh) rotate(180deg); }
+            75% { transform: translate(var(--x3), -90vh) rotate(270deg); }
+            100% { transform: translate(var(--x4), -130vh) rotate(360deg); opacity: 0; }
+        }
+
+        /* AMPLOP ANIMASI */
         .envelope-wrapper { cursor: pointer; position: relative; width: 220px; height: 160px; background: var(--pink); margin: 0 auto; border-radius: 0 0 10px 10px; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
         .envelope-wrapper::before { content: ''; position: absolute; top: 0; left: 0; border-left: 110px solid transparent; border-right: 110px solid transparent; border-top: 100px solid var(--white); transition: 0.6s; transform-origin: top; z-index: 3; }
         .open-btn { position: absolute; top: 60%; left: 50%; transform: translate(-50%, -50%); background: white; color: var(--pink); padding: 8px 20px; border-radius: 20px; font-weight: bold; z-index: 4; border: 2px solid var(--pink); }
@@ -28,13 +58,12 @@
         .letter { position: absolute; top: 10%; left: 10%; width: 80%; height: 80%; background: white; transition: 0.8s; z-index: 2; display: flex; justify-content: center; align-items: center; font-weight: bold; color: var(--pink); border-radius: 5px; opacity: 0; }
         .envelope-wrapper.opened .letter { transform: translateY(-110px); opacity: 1; z-index: 5; }
 
-        /* --- 2. GAME MATCHING --- */
+        /* GRID PERMAINAN */
         .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
         .card { aspect-ratio: 1/1; background: var(--pink); border-radius: 8px; display: flex; justify-content: center; align-items: center; font-size: 24px; cursor: pointer; color: transparent; transition: 0.3s; border: 2px solid white; }
         .card.open { color: var(--pink); background: white; transform: rotateY(180deg); }
         .card.matched { transform: scale(0); opacity: 0; pointer-events: none; transition: 0.6s; }
 
-        /* --- 3. TRANSISI & PERTANYAAN --- */
         img.gif { width: 100%; max-width: 250px; border-radius: 15px; margin-bottom: 10px; }
         input { width: 85%; padding: 12px; border-radius: 10px; border: 2px solid var(--pink); margin-bottom: 15px; text-align: center; font-size: 16px; outline: none; }
         button.confirm-btn { background: var(--pink); color: white; border: none; padding: 12px 30px; border-radius: 25px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.3s; }
@@ -47,6 +76,8 @@
     <source src="https://raw.githubusercontent.com/tampubolonrenhard22-sys/surprise/5c87fbb58802185149a796fcde5743cdfecc295c/lagu1.mpeg" type="audio/mpeg">
 </audio>
 
+<div class="bubble-container" id="bubbleContainer"></div>
+
 <div id="section1" class="container">
     <div class="envelope-wrapper" id="envelope" onclick="openEnvelope()">
         <div class="open-btn">OPEN</div>
@@ -56,7 +87,7 @@
 
 <div id="section2" class="container hidden">
     <img src="https://raw.githubusercontent.com/tampubolonrenhard22-sys/surprise/afbf1262cf09884132dca9f42cb097906679c28b/soksoan.gif" class="gif">
-    <h3 style="color: var(--pink); margin: 5px 0;">Cocokkan Dulu yaa sayang ❤️</h3>
+    <h3 style="color: var(--pink); margin: 5px 0;">Cocokkan dulu Sayang ❤️</h3>
     <div class="grid" id="grid"></div>
 </div>
 
@@ -86,19 +117,49 @@
 <script>
     const music = document.getElementById('bgMusic');
 
-    // --- 1. LOGIKA AMPLOP ---
+    function createBubbles() {
+        const container = document.getElementById('bubbleContainer');
+        for (let i = 0; i < 40; i++) {
+            const bubble = document.createElement('div');
+            bubble.classList.add('bubble');
+            const size = Math.random() * 60 + 20 + 'px'; 
+            bubble.style.width = size;
+            bubble.style.height = size;
+            bubble.style.left = Math.random() * 100 + '%';
+            bubble.style.setProperty('--x1', (Math.random() * 150 - 75) + 'px');
+            bubble.style.setProperty('--x2', (Math.random() * 150 - 75) + 'px');
+            bubble.style.setProperty('--x3', (Math.random() * 150 - 75) + 'px');
+            bubble.style.setProperty('--x4', (Math.random() * 150 - 75) + 'px');
+            bubble.style.animationDuration = Math.random() * 10 + 10 + 's';
+            bubble.style.animationDelay = Math.random() * 8 + 's';
+            container.appendChild(bubble);
+        }
+    }
+    createBubbles();
+
+    function showSection(sectionId) {
+        document.querySelectorAll('.container:not(#section1)').forEach(el => {
+            el.classList.add('hidden');
+            el.classList.remove('animate-in');
+        });
+        const target = document.getElementById(sectionId);
+        target.classList.remove('hidden');
+        void target.offsetWidth; 
+        target.classList.add('animate-in');
+    }
+
+    // --- UPDATE: DURASI AMPLOP SEKARANG 2 DETIK ---
     function openEnvelope() {
         music.play();
         const env = document.getElementById('envelope');
         env.classList.add('opened');
         setTimeout(() => {
             document.getElementById('section1').classList.add('hidden');
-            document.getElementById('section2').classList.remove('hidden');
+            showSection('section2');
             initGame();
-        }, 3500); 
+        }, 2000); // Pas 2 detik
     }
 
-    // --- 2. LOGIKA GAME ---
     const emojis = ['❤️', '💖', '💝', '😍', '💓', '💘', '❤️', '💖', '💝', '😍', '💓', '💘'];
     let selected = [];
     let matchedCount = 0;
@@ -136,27 +197,19 @@
         selected = [];
     }
 
-    // --- 3. LOGIKA TRANSISI ---
     function showTransition1() {
-        document.getElementById('section2').classList.add('hidden');
-        document.getElementById('section3').classList.remove('hidden');
-        setTimeout(() => {
-            document.getElementById('section3').classList.add('hidden');
-            document.getElementById('section4').classList.remove('hidden');
-        }, 5000); 
+        showSection('section3');
+        setTimeout(() => showSection('section4'), 5000); 
     }
 
     function processQuestion() {
-        document.getElementById('section4').classList.add('hidden');
-        document.getElementById('section5').classList.remove('hidden');
+        showSection('section5');
         setTimeout(() => {
-            document.getElementById('section5').classList.add('hidden');
-            document.getElementById('section6').classList.remove('hidden');
+            showSection('section6');
             startTypewriter();
         }, 5000); 
     }
 
-    // --- 4. TYPEWRITER FINAL ---
     function startTypewriter() {
         const text = "Selamat hari valentine sayangkuu, cantikku and semestakuu, makasih udah mau nemani hari hariku yang melelahkan hehehe jangan pernah berubah yaa, aku bangga punya kamu yang selalu ada buat aku, kamu wanita tercantikk yang pernah aku kenal, tetaplah bersamaku, aku mencintaimuuu🫶🏻💐✨💞🤏🏻";
         let i = 0;
